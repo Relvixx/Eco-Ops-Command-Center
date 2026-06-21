@@ -26,18 +26,18 @@ export default function MissionLog() {
       className="rounded-xl p-4 flex flex-col gap-3"
       style={{ backgroundColor: 'var(--color-bg-card)' }}
     >
-      <h2 className="text-xs font-semibold tracking-widest uppercase text-[var(--color-chrome)]">
+      <h2 className="text-xs font-semibold tracking-widest uppercase text-chrome">
         ◈ Mission Log
       </h2>
 
       {logs.length === 0 ? (
         // Empty state
         <div className="flex flex-col items-center justify-center py-6 gap-2">
-          <Clock size={24} className="text-[var(--color-chrome)]" />
-          <p className="text-[16px] font-medium text-[var(--color-chrome-bright)]">
+          <Clock size={24} className="text-chrome" />
+          <p className="text-[16px] font-medium text-chrome-bright">
             NO MISSIONS LOGGED.
           </p>
-          <p className="text-[14px] text-[var(--color-chrome)]">
+          <p className="text-[14px] text-chrome">
             BEGIN FIELD OPERATIONS.
           </p>
         </div>
@@ -62,7 +62,7 @@ export default function MissionLog() {
           {hasMore && !isExpanded && (
             <button
               onClick={() => setIsExpanded(true)}
-              className="text-[14px] text-[var(--color-chrome)] hover:text-[var(--color-chrome-bright)] transition-colors cursor-pointer"
+              className="text-[14px] text-chrome hover:text-chrome-bright transition-colors cursor-pointer"
             >
               View more ↓ ({logs.length - maxVisible} more)
             </button>

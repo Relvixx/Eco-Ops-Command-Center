@@ -1,103 +1,65 @@
-// ============================================
-// useAPEX Hook — AI Advisory Lifecycle
-// Source: TRD §7.3, Implementation Plan §T3.4
-// Manages: prompt build → API call → fallback → dispatch
-// ============================================
-
-import { useState, useCallback } from 'react';
-import { useGameContext } from '../context/GameContext';
-import { buildUserPrompt } from '../utils/promptBuilder';
-import { sanitize } from '../utils/sanitizer';
+// src/hooks/useApex.ts
+import { useCallback } from 'react';
+import type { TipSource } from '../types';
 import { getNextFallback } from '../constants/fallbackMessages';
-import { ACTIONS } from '../types';
-import type { LogEntry, APEXResponse } from '../types';
 
-const ABORT_TIMEOUT_MS = 15000; // 15-second abort
+interface LogSummary {
+  category: string;
+  action: string;
+  hpChange: number;
+}
 
-export function useAPEX() {
-  const { state, dispatch } = useGameContext();
-  const [isLoading, setIsLoading] = useState(false);
-  const [latestTip, setLatestTip] = useState<string>('');
-  const [tipSource, setTipSource] = useState<'gemini' | 'groq' | 'fallback'>('fallback');
+interface ApexResult {
+  tip: string;
+  source: TipSource;
+}
 
-  /**
-   * Call APEX advisor for a new tip.
-   * @param logEntry — the just-submitted log entry
-   */
-  const callAPEX = useCallback(
-    async (logEntry: LogEntry) => {
-      setIsLoading(true);
-
-      // Prepare recent logs (last 3 including the new one)
-      const recentLogs = [logEntry, ...state.logs.slice(0, 2)].map((log) => ({
-        category: log.category,
-        action: log.action,
-        hpChange: log.hpChange,
-      }));
-
-      // Check network
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        console.warn('[APEX] Network offline — using fallback tip');
-        const fallbackTip = getNextFallback();
-        setLatestTip(fallbackTip);
-        setTipSource('fallback');
-        dispatch({
-          type: ACTIONS.SET_AI_TIP,
-          payload: { logId: logEntry.id, tip: fallbackTip, tipSource: 'fallback' },
-        });
-        setIsLoading(false);
-        return;
+export function useApex() {
+  const fetchTip = useCallback(
+    async (currentHP: number, recentLogs: LogSummary[]): Promise<ApexResult> => {
+      // Check network before attempting fetch
+      if (!navigator.onLine) {
+        console.warn('[useApex] Network offline — using fallback tip');
+        return { tip: getNextFallback(), source: 'fallback' };
       }
 
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), ABORT_TIMEOUT_MS);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
 
-        const response = await fetch('/api/apex-advisor', {
+      try {
+        const res = await fetch('/api/apex-advisor', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            currentHP: state.baseHealth,
-            recentLogs,
-          }),
+          body: JSON.stringify({ currentHP, recentLogs: recentLogs.slice(0, 3) }),
           signal: controller.signal,
         });
 
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data: APEXResponse = await response.json();
-          const cleanTip = sanitize(data.tip);
-          setLatestTip(cleanTip);
-          setTipSource(data.source);
-          dispatch({
-            type: ACTIONS.SET_AI_TIP,
-            payload: { logId: logEntry.id, tip: cleanTip, tipSource: data.source },
-          });
-        } else {
-          // Server returned error — use fallback
-          throw new Error(`API returned ${response.status}`);
+        if (!res.ok) {
+          console.warn('[useApex] API returned', res.status);
+          return { tip: getNextFallback(), source: 'fallback' };
         }
-      } catch (error) {
-        console.warn('[APEX] API call failed — using fallback:', (error as Error).message);
-        const fallbackTip = getNextFallback();
-        setLatestTip(fallbackTip);
-        setTipSource('fallback');
-        dispatch({
-          type: ACTIONS.SET_AI_TIP,
-          payload: { logId: logEntry.id, tip: fallbackTip, tipSource: 'fallback' },
-        });
+
+        const data = await res.json();
+
+        // Server signalled fallback
+        if (data.source === 'fallback' || !data.tip) {
+          return { tip: getNextFallback(), source: 'fallback' };
+        }
+
+        return { tip: data.tip, source: data.source as TipSource };
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') {
+          console.warn('[useApex] Request timed out after 15s');
+        } else {
+          console.warn('[useApex] Fetch failed:', (err as Error).message);
+        }
+        return { tip: getNextFallback(), source: 'fallback' };
       } finally {
-        setIsLoading(false);
+        clearTimeout(timeout);
       }
     },
-    [state.logs, state.baseHealth, dispatch],
+    []
   );
 
-  return {
-    callAPEX,
-    isLoading,
-    latestTip,
-    tipSource,
-  };
+  return { fetchTip };
 }

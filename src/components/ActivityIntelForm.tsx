@@ -9,8 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { EMISSION_FACTORS, CATEGORY_META } from '../constants/emissionFactors';
 import { useGameEngine } from '../hooks/useGameEngine';
-import { useAPEX } from '../hooks/useAPEX';
+import { useApex } from '../hooks/useApex';
 import { useGameContext } from '../context/GameContext';
+import { ACTIONS } from '../types';
 import { getHPState } from '../utils/hpCalculator';
 import { HP_STATE_CONFIG } from '../constants/hpStates';
 import type { Category } from '../types';
@@ -18,9 +19,9 @@ import type { Category } from '../types';
 const CATEGORIES: Category[] = ['Transport', 'Food', 'Energy', 'Offset'];
 
 export default function ActivityIntelForm() {
-  const { state } = useGameContext();
+  const { state, dispatch } = useGameContext();
   const { submitActivity, isSubmitting, cooldownRemaining } = useGameEngine();
-  const { callAPEX } = useAPEX();
+  const { fetchTip } = useApex();
 
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedFactorId, setSelectedFactorId] = useState<string | null>(null);
@@ -82,14 +83,19 @@ export default function ActivityIntelForm() {
 
     if (logEntry) {
       // Fire AI call (non-blocking)
-      callAPEX(logEntry);
+      fetchTip(state.baseHealth, [...state.logs, logEntry]).then((res: { tip: string; source: 'gemini' | 'groq' | 'fallback' }) => {
+        dispatch({
+          type: ACTIONS.SET_AI_TIP,
+          payload: { logId: logEntry.id, tip: res.tip, tipSource: res.source },
+        });
+      });
 
       // Reset form
       setSelectedFactorId(null);
       setDistance('');
       setDistanceError('');
     }
-  }, [canSubmit, selectedFactorId, needsDistance, distanceValue, submitActivity, callAPEX]);
+  }, [canSubmit, selectedFactorId, needsDistance, distanceValue, submitActivity, fetchTip, dispatch, state.baseHealth, state.logs]);
 
   // Submit button label
   let submitLabel = 'LOG ACTIVITY';
@@ -102,13 +108,13 @@ export default function ActivityIntelForm() {
       className="rounded-xl p-4 flex flex-col gap-3"
       style={{ backgroundColor: 'var(--color-bg-card)' }}
     >
-      <h2 className="text-xs font-semibold tracking-widest uppercase text-[var(--color-chrome)]">
+      <h2 className="text-xs font-semibold tracking-widest uppercase text-chrome">
         ◈ Activity Intel
       </h2>
 
       {/* Category Tabs */}
       <div
-        className="flex overflow-x-auto scrollbar-hidden gap-0 border-b border-[var(--color-chrome)]/20"
+        className="flex overflow-x-auto scrollbar-hidden gap-0 border-b border-chrome/20"
         role="tablist"
       >
         {CATEGORIES.map((cat) => {
@@ -169,7 +175,7 @@ export default function ActivityIntelForm() {
                         : '1px solid transparent',
                     }}
                   >
-                    <span className="text-[14px] font-medium text-[var(--color-chrome-bright)]">
+                    <span className="text-[14px] font-medium text-chrome-bright">
                       {factor.label}
                     </span>
                     <span
@@ -203,7 +209,7 @@ export default function ActivityIntelForm() {
             <div className="flex flex-col gap-1 py-1">
               <label
                 htmlFor="distance-input"
-                className="text-xs text-[var(--color-chrome)] uppercase tracking-wider"
+                className="text-xs text-chrome uppercase tracking-wider"
               >
                 Distance (km)
               </label>
@@ -235,11 +241,9 @@ export default function ActivityIntelForm() {
         )}
       </AnimatePresence>
 
-      {/* Submit Button */}
       <motion.button
         id="submit-activity"
         onClick={handleSubmit}
-        disabled={!canSubmit}
         whileTap={canSubmit ? { scale: 0.97 } : undefined}
         className="w-full h-[52px] md:h-[56px] rounded-lg text-[15px] font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-150 cursor-pointer"
         style={{
@@ -248,7 +252,7 @@ export default function ActivityIntelForm() {
           color: '#0A0C10',
           cursor: canSubmit ? 'pointer' : 'not-allowed',
         }}
-        aria-disabled={!canSubmit}
+        disabled={!canSubmit || isSubmitting || cooldownRemaining > 0}
         aria-label={
           cooldownRemaining > 0
             ? `Cooling down, ${cooldownRemaining} seconds remaining`

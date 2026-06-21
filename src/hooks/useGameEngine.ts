@@ -12,7 +12,6 @@ import { computeStreak } from '../utils/streakEngine';
 import { ACTIONS } from '../types';
 import type { Category, LogEntry, EmissionFactor } from '../types';
 
-const COOLDOWN_MS = 3000; // 3-second submit debounce
 
 export function useGameEngine() {
   const { state, dispatch } = useGameContext();
@@ -76,11 +75,12 @@ export function useGameEngine() {
       const newTodayNetHP = isNewDay ? hpChange : state.todayNetHP + hpChange;
 
       // Calculate streak
-      const newStreak = computeStreak(
+      const streakResult = computeStreak(
         state.streak,
         state.lastActiveDate,
         newTodayNetHP,
       );
+      const newStreak = streakResult.streak;
 
       // Build log entry
       const logEntry: LogEntry = {

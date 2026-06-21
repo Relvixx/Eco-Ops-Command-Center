@@ -6,20 +6,21 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
-import { useAPEX } from '../hooks/useAPEX';
 import { useGameContext } from '../context/GameContext';
 
 export default function AIAdvisorPanel() {
   const { state } = useGameContext();
-  const { isLoading, latestTip, tipSource } = useAPEX();
 
   // Don't render until first log exists
   const hasLogs = state.logs.length > 0;
+  // If the newest log doesn't have an AI tip yet, it's loading.
+  const isLoading = hasLogs && !state.logs[0].aiTip;
+
   if (!hasLogs && !isLoading) return null;
 
   // Get the latest tip from the most recent log entry
-  const displayTip = latestTip || (state.logs.length > 0 ? state.logs[0].aiTip : '');
-  const displaySource = latestTip ? tipSource : (state.logs.length > 0 ? state.logs[0].tipSource : 'fallback');
+  const displayTip = state.logs.length > 0 ? state.logs[0].aiTip : '';
+  const displaySource = state.logs.length > 0 ? state.logs[0].tipSource : 'fallback';
   const isFallback = displaySource === 'fallback';
 
   return (
@@ -33,7 +34,7 @@ export default function AIAdvisorPanel() {
         style={{ backgroundColor: 'var(--color-bg-card)' }}
       >
         {/* Header */}
-        <h2 className="text-xs font-semibold tracking-widest uppercase text-[var(--color-chrome)]">
+        <h2 className="text-xs font-semibold tracking-widest uppercase text-chrome">
           ◈ APEX ▪ TACTICAL ADVISORY
         </h2>
 
@@ -61,7 +62,7 @@ export default function AIAdvisorPanel() {
             {/* Source badge */}
             <div className="flex items-center gap-1.5 mt-2">
               {isFallback && (
-                <AlertTriangle size={14} className="text-[var(--color-hp-threat)]" />
+                <AlertTriangle size={14} className="text-hp-threat" />
               )}
               <span
                 className="text-[12px] font-mono tracking-wider uppercase"

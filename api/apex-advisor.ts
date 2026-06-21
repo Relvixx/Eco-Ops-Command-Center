@@ -1,120 +1,131 @@
-// ============================================
-// APEX Advisor API Endpoint (Vercel Serverless Function)
-// Source: TRD §6.4
-// Integrates Google Gemini with Groq fallback
-// ============================================
-
+// api/apex-advisor.ts
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Groq } from 'groq-sdk';
-import { SYSTEM_PROMPT, buildUserPrompt } from '../src/utils/promptBuilder';
-import { sanitize } from '../src/utils/sanitizer';
+import Groq from 'groq-sdk';
 
-// Initialize SDKs
-const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
+const SYSTEM_PROMPT = `You are APEX, a Tactical Eco-Advisor AI embedded inside a carbon defense command center called Eco-Ops. Your mission is to help the operator protect their Base Health score.
 
-// Model Constants
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const GROQ_MODEL = 'llama3-8b-8192';
+Rules you MUST follow:
+Respond ONLY with exactly 2 sentences. Never more, never less.
+Sentence 1: Briefly assess the threat level of their recent activity pattern — reference the specific action if possible.
+Sentence 2: Issue ONE concrete, specific, actionable recovery mission for tomorrow — not a vague suggestion.
+Use a sharp, direct, military-strategic tone — like a field commander briefing an operator.
+Never use bullet points, markdown, headers, or any special characters in your response.
+Keep total word count under 45 words.`;
 
-const GEMINI_TIMEOUT_MS = 10000; // 10 seconds
-const GROQ_TIMEOUT_MS = 8000;    // 8 seconds
+const FALLBACK_MESSAGES = [
+  'Comms link down. Tactical advice offline. Stick to public transport and skip the meat — base will hold.',
+  'Signal corrupted. Default protocol: walk or cycle tomorrow, choose a plant-based meal. Base integrity maintained.',
+  'Transmission jammed. Operational order: reduce vehicle usage by 50% tomorrow to stabilize base health.',
+];
 
-export default async function handler(req: any, res: any) {
-  // Only allow POST
+let fallbackIdx = 0;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function getNextFallback(): string {
+  return FALLBACK_MESSAGES[fallbackIdx++ % FALLBACK_MESSAGES.length];
+}
+
+function sanitize(text: string): string {
+  if (typeof text !== 'string') return '';
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/[*_`#~|]/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\n{2,}/g, ' ')
+    .replace(/\n/g, ' ')
+    .trim()
+    .slice(0, 300);
+}
+
+function buildUserPrompt(currentHP: number, recentLogs: Array<{category: string; action: string; hpChange: number}>): string {
+  const logSummary = recentLogs
+    .slice(0, 3)
+    .map((l, i) => `${i + 1}. ${l.category}: ${l.action} (HP ${l.hpChange > 0 ? '+' : ''}${l.hpChange})`)
+    .join(', ');
+  return `Operator Status Report: Base Health is currently ${currentHP}%. Recent Activity Log: ${logSummary || 'No recent activity'}. Assess and issue recovery orders.`;
+}
+
+function isValidRequest(currentHP: unknown, recentLogs: unknown): boolean {
+  if (typeof currentHP !== 'number') return false;
+  if (currentHP < 0 || currentHP > 150) return false;
+  if (!Array.isArray(recentLogs)) return false;
+  if (recentLogs.length === 0 || recentLogs.length > 3) return false;
+  const validCats = ['Transport', 'Food', 'Energy', 'Offset'];
+  return recentLogs.every((l: unknown) => {
+    if (typeof l !== 'object' || l === null) return false;
+    const log = l as Record<string, unknown>;
+    return (
+      typeof log.action === 'string' &&
+      log.action.length <= 100 &&
+      validCats.includes(log.category as string) &&
+      typeof log.hpChange === 'number'
+    );
+  });
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { currentHP, recentLogs } = req.body;
+  const { currentHP, recentLogs } = req.body ?? {};
 
-    // Validate payload
-    if (typeof currentHP !== 'number' || !Array.isArray(recentLogs)) {
-      return res.status(400).json({ error: 'Invalid payload' });
-    }
-
-    const userPrompt = buildUserPrompt(currentHP, recentLogs);
-    console.log('[API] Processing APEX request. HP:', currentHP, 'Logs:', recentLogs.length);
-
-    // ==========================================
-    // 1. Attempt Primary: Google Gemini
-    // ==========================================
-    try {
-      console.log(`[API] Attempting ${GEMINI_MODEL}...`);
-      const model = gemini.getGenerativeModel({ model: GEMINI_MODEL });
-      
-      const promptPromise = model.generateContent({
-        contents: [
-          { role: 'user', parts: [{ text: SYSTEM_PROMPT + '\n\n' + userPrompt }] }
-        ],
-        generationConfig: {
-          maxOutputTokens: 150,
-          temperature: 0.7,
-        }
-      });
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Gemini timeout')), GEMINI_TIMEOUT_MS)
-      );
-
-      const result = await Promise.race([promptPromise, timeoutPromise]) as any;
-      const text = result.response.text();
-      
-      console.log(`[API] ${GEMINI_MODEL} SUCCESS.`);
-      return res.status(200).json({
-        tip: sanitize(text),
-        source: 'gemini'
-      });
-
-    } catch (geminiError) {
-      console.warn(`[API] ${GEMINI_MODEL} FAILED:`, (geminiError as Error).message);
-      
-      // ==========================================
-      // 2. Attempt Fallback: Groq (Llama 3)
-      // ==========================================
-      try {
-        console.log(`[API] Attempting fallback ${GROQ_MODEL}...`);
-        
-        const groqPromise = groq.chat.completions.create({
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt }
-          ],
-          model: GROQ_MODEL,
-          max_tokens: 150,
-          temperature: 0.7,
-        });
-
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Groq timeout')), GROQ_TIMEOUT_MS)
-        );
-
-        const result = await Promise.race([groqPromise, timeoutPromise]) as any;
-        const text = result.choices[0]?.message?.content || '';
-
-        console.log(`[API] ${GROQ_MODEL} SUCCESS.`);
-        return res.status(200).json({
-          tip: sanitize(text),
-          source: 'groq'
-        });
-
-      } catch (groqError) {
-        console.error(`[API] ${GROQ_MODEL} FAILED:`, (groqError as Error).message);
-        
-        // Both failed — client handles 503 by using static fallback
-        return res.status(503).json({ 
-          error: 'AI Services Unavailable', 
-          source: 'fallback' 
-        });
-      }
-    }
-
-  } catch (error) {
-    console.error('[API] Fatal Error:', (error as Error).message);
-    return res.status(500).json({ 
-      error: 'Internal Server Error', 
-      source: 'fallback' 
-    });
+  if (!isValidRequest(currentHP, recentLogs)) {
+    console.warn('[APEX] Invalid payload rejected');
+    return res.status(400).json({ error: 'Invalid request body' });
   }
+
+  const userPrompt = buildUserPrompt(currentHP as number, recentLogs);
+
+  // Attempt 1: Gemini
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const genAI = new GoogleGenerativeAI(geminiKey);
+      const model = genAI.getGenerativeModel(
+        { model: 'gemini-1.5-flash' },
+        { timeout: 10000 }
+      );
+      const chat = model.startChat({
+        history: [
+          { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+          { role: 'model', parts: [{ text: 'APEX online. Awaiting operator status report.' }] },
+        ],
+      });
+      const result = await chat.sendMessage(userPrompt);
+      const tip = sanitize(result.response.text());
+      if (tip.length > 10) {
+        return res.status(200).json({ tip, source: 'gemini' });
+      }
+    } catch (err) {
+      console.error('[APEX] Gemini failed:', (err as Error).message);
+    }
+  }
+
+  // Attempt 2: Groq
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    try {
+      const groq = new Groq({ apiKey: groqKey });
+      const completion = await groq.chat.completions.create({
+        model: 'llama3-8b-8192',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        max_tokens: 120,
+        temperature: 0.7,
+      });
+      const tip = sanitize(completion.choices[0]?.message?.content ?? '');
+      if (tip.length > 10) {
+        return res.status(200).json({ tip, source: 'groq' });
+      }
+    } catch (err) {
+      console.error('[APEX] Groq failed:', (err as Error).message);
+    }
+  }
+
+  // Attempt 3: Hardcoded fallback
+  console.warn('[APEX] All providers failed — returning hardcoded fallback');
+  return res.status(503).json({ error: 'All AI providers unavailable', source: 'fallback' });
 }

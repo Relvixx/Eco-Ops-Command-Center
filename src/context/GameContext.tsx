@@ -45,8 +45,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return initState();
     }
 
-    case ACTIONS.SET_AI_LOADING:
-      return state; // AI loading is tracked separately in useAPEX hook
 
     default:
       return state;
@@ -57,7 +55,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 interface GameContextType {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
-  previousHP: number;
   isDemoMode: boolean;
   setIsDemoMode: (v: boolean) => void;
 }
@@ -67,7 +64,6 @@ const GameContext = createContext<GameContextType | null>(null);
 // --- Provider ---
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initState());
-  const previousHP = useRef(state.baseHealth);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const isBootstrapped = useRef(false);
 
@@ -81,7 +77,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       // Restore saved state via LOG_ACTIVITY-like dispatch won't work cleanly,
       // so we use LOAD_DEMO to restore the full saved state
       dispatch({ type: ACTIONS.LOAD_DEMO, payload: { demoState: saved } });
-      previousHP.current = saved.baseHealth;
     }
   }, []);
 
@@ -93,20 +88,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state, isDemoMode]);
 
-  // Track previous HP for animation triggers
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      previousHP.current = state.baseHealth;
-    }, 1200); // Wait for animations to complete
-    return () => clearTimeout(timer);
-  }, [state.baseHealth]);
 
   return (
     <GameContext.Provider
       value={{
         state,
         dispatch,
-        previousHP: previousHP.current,
         isDemoMode,
         setIsDemoMode,
       }}

@@ -13,7 +13,7 @@ import { HP_STATE_CONFIG, HP_MAX } from '../constants/hpStates';
 import type { HPState } from '../types';
 
 export default function BaseHealthDisplay() {
-  const { state, previousHP } = useGameContext();
+  const { state } = useGameContext();
   const { baseHealth: hp, streak } = state;
 
   const hpState = getHPState(hp);
@@ -92,7 +92,7 @@ export default function BaseHealthDisplay() {
         style={{ color: config.color }}
       >
         {displayValue}
-        <span className="text-[40px] lg:text-[56px] text-[var(--color-chrome-muted)] ml-1">%</span>
+        <span className="text-[40px] lg:text-[56px] text-chrome-muted ml-1">%</span>
       </div>
 
       {/* HP Bar */}
@@ -121,13 +121,13 @@ export default function BaseHealthDisplay() {
       <div className="flex items-center gap-1.5 mt-1 text-sm">
         {streak > 0 ? (
           <>
-            <Flame size={16} className="text-[var(--color-hp-threat)]" />
-            <span className="font-body text-[var(--color-chrome-bright)]">
+            <Flame size={16} className="text-hp-threat" />
+            <span className="font-body text-chrome-bright">
               {streak}-Day Streak
             </span>
           </>
         ) : (
-          <span className="text-[var(--color-chrome)] text-[14px]">
+          <span className="text-chrome text-[14px]">
             — No streak yet —
           </span>
         )}

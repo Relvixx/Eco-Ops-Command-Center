@@ -22,16 +22,19 @@ export function computeStreak(
   currentStreak: number,
   lastActiveDate: string,
   todayNetHP: number,
-): number {
-  // If net HP for today is negative or zero, no streak
-  if (todayNetHP <= 0) return 0;
-
+): { streak: number; lastActiveDate: string } {
   const today = new Date().toISOString().split('T')[0];
+
+  // If net HP for today is negative or zero, no streak
+  if (todayNetHP <= 0) {
+    return { streak: 0, lastActiveDate: today };
+  }
+
   const lastDate = lastActiveDate;
 
   // Same day — maintain or start streak
   if (lastDate === today) {
-    return Math.max(currentStreak, 1);
+    return { streak: Math.max(currentStreak, 1), lastActiveDate: today };
   }
 
   // Calculate day difference
@@ -41,9 +44,9 @@ export function computeStreak(
 
   if (daysDiff === 1) {
     // Consecutive day — increment streak
-    return currentStreak + 1;
+    return { streak: currentStreak + 1, lastActiveDate: today };
   }
 
   // Skipped one or more days — new streak starts at 1
-  return 1;
+  return { streak: 1, lastActiveDate: today };
 }

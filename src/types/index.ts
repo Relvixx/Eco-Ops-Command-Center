@@ -49,13 +49,13 @@ export interface GameState {
 }
 
 // --- Reducer Action Types ---
-export enum ACTIONS {
-  LOG_ACTIVITY   = 'LOG_ACTIVITY',
-  LOAD_DEMO      = 'LOAD_DEMO',
-  RESET_BASE     = 'RESET_BASE',
-  SET_AI_TIP     = 'SET_AI_TIP',
-  SET_AI_LOADING = 'SET_AI_LOADING',
-}
+export const ACTIONS = {
+  LOG_ACTIVITY: 'LOG_ACTIVITY',
+  LOAD_DEMO: 'LOAD_DEMO',
+  RESET_BASE: 'RESET_BASE',
+  SET_AI_TIP: 'SET_AI_TIP',
+  SET_AI_LOADING: 'SET_AI_LOADING',
+} as const;
 
 // --- Action Payloads ---
 export interface LogActivityPayload {
@@ -77,11 +77,12 @@ export interface LoadDemoPayload {
 }
 
 export type GameAction =
-  | { type: ACTIONS.LOG_ACTIVITY; payload: LogActivityPayload }
-  | { type: ACTIONS.LOAD_DEMO; payload: LoadDemoPayload }
-  | { type: ACTIONS.RESET_BASE }
-  | { type: ACTIONS.SET_AI_TIP; payload: SetAITipPayload }
-  | { type: ACTIONS.SET_AI_LOADING; payload: boolean };
+  | { type: typeof ACTIONS.LOG_ACTIVITY; payload: LogActivityPayload }
+  | { type: typeof ACTIONS.LOAD_DEMO; payload: LoadDemoPayload }
+  | { type: typeof ACTIONS.RESET_BASE }
+  | { type: typeof ACTIONS.SET_AI_TIP; payload: SetAITipPayload };
+
+export type TipSource = 'gemini' | 'groq' | 'fallback';
 
 // --- AI API Contract ---
 export interface APEXRequest {

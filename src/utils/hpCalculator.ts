@@ -27,8 +27,7 @@ export function applyHPChange(currentHP: number, hpChange: number): number {
  */
 export function scaleHPByDistance(baseHPChange: number, km: number): number {
   if (km <= 0) return baseHPChange; // No distance = base value
-  const units = Math.max(1, Math.round(km / DISTANCE_UNIT_KM));
-  return baseHPChange * units;
+  return Math.round((baseHPChange * km) / DISTANCE_UNIT_KM);
 }
 
 /**

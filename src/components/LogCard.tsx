@@ -40,8 +40,8 @@ export default function LogCard({ log }: LogCardProps) {
     >
       {/* Main row */}
       <div className="flex items-center gap-2">
-        <Icon size={16} className="text-[var(--color-chrome)] shrink-0" />
-        <span className="flex-1 text-[14px] font-medium text-[var(--color-chrome-bright)] truncate">
+        <Icon size={16} className="text-chrome shrink-0" />
+        <span className="flex-1 text-[14px] font-medium text-chrome-bright truncate">
           {log.action}
         </span>
         <span
@@ -50,14 +50,14 @@ export default function LogCard({ log }: LogCardProps) {
         >
           {isPositive ? '+' : ''}{log.hpChange} HP
         </span>
-        <span className="text-[12px] font-mono text-[var(--color-chrome-muted)] shrink-0">
+        <span className="text-[12px] font-mono text-chrome-muted shrink-0">
           {time}
         </span>
       </div>
 
       {/* AI tip preview */}
       {log.aiTip && (
-        <p className="text-[13px] text-[var(--color-chrome)] truncate pl-6">
+        <p className="text-[13px] text-chrome truncate pl-6">
           {log.aiTip}
         </p>
       )}

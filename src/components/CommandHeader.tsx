@@ -18,14 +18,14 @@ export default function CommandHeader() {
   return (
     <header
       id="command-header"
-      className="sticky top-0 z-50 flex items-center justify-between px-4 h-[56px] md:h-[48px] border-b border-[var(--color-chrome)]/20"
+      className="sticky top-0 z-50 flex items-center justify-between px-4 h-[56px] md:h-[48px] border-b border-chrome/20"
       style={{ backgroundColor: 'var(--color-bg-header)' }}
     >
       {/* Logo */}
       <div className="flex items-center gap-2">
-        <Shield size={20} className="text-[var(--color-chrome-bright)]" />
+        <Shield size={20} className="text-chrome-bright" />
         <span
-          className="font-display font-semibold text-[22px] tracking-wide text-[var(--color-chrome-bright)]"
+          className="font-display font-semibold text-[22px] tracking-wide text-chrome-bright"
         >
           ECO-OPS
         </span>
@@ -39,7 +39,7 @@ export default function CommandHeader() {
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: stateColor }}
           />
-          <span className="font-mono text-[16px] font-medium text-[var(--color-chrome-bright)]">
+          <span className="font-mono text-[16px] font-medium text-chrome-bright">
             {state.baseHealth}
           </span>
         </div>

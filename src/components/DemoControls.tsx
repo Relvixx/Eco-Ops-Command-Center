@@ -41,7 +41,7 @@ export default function DemoControls() {
       {!isDemoMode ? (
         <button
           onClick={handleLoadDemo}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[var(--color-bg-input)] hover:bg-[var(--color-bg-card)] text-[12px] font-medium text-[var(--color-accent-teal)] border border-[var(--color-accent-teal)]/30 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-bg-input hover:bg-bg-card text-[12px] font-medium text-accent-teal border border-accent-teal/30 transition-colors cursor-pointer"
           title="Load Demo Mode (for Judges)"
         >
           <PlaySquare size={14} />
@@ -49,7 +49,7 @@ export default function DemoControls() {
         </button>
       ) : (
         <div className="flex items-center gap-2">
-          <span className="text-[12px] font-bold text-[var(--color-hp-threat)] uppercase tracking-wider animate-pulse">
+          <span className="text-[12px] font-bold text-hp-threat uppercase tracking-wider animate-pulse">
             DEMO ACTIVE
           </span>
         </div>
@@ -57,7 +57,7 @@ export default function DemoControls() {
       
       <button
         onClick={handleReset}
-        className="flex items-center justify-center w-8 h-8 rounded bg-[var(--color-bg-input)] hover:bg-[var(--color-hp-critical)]/20 text-[var(--color-chrome-muted)] hover:text-[var(--color-hp-critical)] transition-colors cursor-pointer"
+        className="flex items-center justify-center w-8 h-8 rounded bg-bg-input hover:bg-hp-critical/20 text-chrome-muted hover:text-hp-critical transition-colors cursor-pointer"
         title="Hard Reset (Wipe all data)"
       >
         <RotateCcw size={16} />
