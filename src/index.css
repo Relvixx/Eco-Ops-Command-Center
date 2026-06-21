@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+/* ============================================
+   Eco-Ops Command Center — Design Tokens
+   Source: UX Design Doc §5.2
+   "Liquid Carbon & Chrome" theme
+   ============================================ */
+
+@theme {
+  /* Backgrounds */
+  --color-bg-primary: #0A0C10;
+  --color-bg-card: #12151C;
+  --color-bg-header: #0D1117;
+  --color-bg-input: #1E2330;
+
+  /* Chrome system */
+  --color-chrome: #8B9AB5;
+  --color-chrome-bright: #C8D8E8;
+  --color-chrome-muted: #5A6577;
+
+  /* HP state colours */
+  --color-hp-optimal: #00FF87;
+  --color-hp-operational: #16A34A;
+  --color-hp-threat: #FFD60A;
+  --color-hp-critical: #FF3131;
+
+  /* Accents */
+  --color-accent-teal: #2DD4BF;
+
+  /* Font families */
+  --font-display: 'Teko', Impact, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-chrome-muted) var(--color-bg-primary);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-bg-primary);
+  color: var(--color-chrome-bright);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  transition: background-color 800ms ease;
+}
+
+/* Focus ring — always visible, HP-aware */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-teal);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   HP Drama Animations — CSS Keyframes
+   ============================================ */
+
+/* Tier 2 — Scan line sweep (fires once) */
+@keyframes scanLine {
+  0% { transform: translateX(-100%); opacity: 0.4; }
+  100% { transform: translateX(100vw); opacity: 0; }
+}
+
+/* Tier 3 — BASE DESTROYED screen flicker */
+@keyframes screenFlicker {
+  0% { opacity: 1; }
+  16.6% { opacity: 0.2; }
+  33.3% { opacity: 1; }
+  50% { opacity: 0.2; }
+  66.6% { opacity: 1; }
+  83.3% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+/* Tier 3 — CRITICAL HP pulse */
+@keyframes criticalPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Shimmer loading effect for APEX skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Optimal glow pulse */
+@keyframes optimalGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 255, 135, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 255, 135, 0.5); }
+}
+
+/* Recovery CTA pulse */
+@keyframes ctaPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.shimmer-bar {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-card) 25%,
+    var(--color-bg-input) 50%,
+    var(--color-bg-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.scan-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 100vh;
+  z-index: 100;
+  pointer-events: none;
+  animation: scanLine 600ms linear forwards;
+}
+
+/* Scrollbar hidden (category tabs mobile) */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
